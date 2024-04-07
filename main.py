@@ -6,7 +6,6 @@ import telethon
 from telethon import TelegramClient, sync
 import asyncio
 import os
-import socks
 import openpyxl
 
 bot = telebot.TeleBot('6021346982:AAFaS3Y_Hlhwzts0-AuUX1vmjJeXrqX4l9M')
