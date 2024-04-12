@@ -211,18 +211,24 @@ def send_spam(message):
             for col in worksheet.iter_cols(3, 3):
                 recipients.append(col[i].value)
     except Exception as e:
-        bot.send_message(chat_id, 'База не найдена, используйте /set_base ' + str(e))
+        bot.send_message(chat_id, 'База не найдена, используйте /set_base ')
         return
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     users = get_saved_users(chat_id)
+    if len(users) == 0:
+        bot.send_message(chat_id, "У вас нет юзеров.")
+        return
     valid_users = []
-    for user in get_saved_users(chat_id):
+    for user in users:
         if check_user(user, chat_id):
             valid_users.append(user)
         else:
             bot.send_message(chat_id, "Аккаунт " + user["login"] + " - не валид")
+    if len(valid_users) == 0:
+        bot.send_message(chat_id, "У вас нет валидных юзеров.")
+        return
     _it = 0
     _itRec = 0
     _errors = 0
@@ -272,7 +278,7 @@ def send_spam(message):
                 print(user["login"], recipients[_itRec], message_text)
                 tg_client.send_message(recipients[_itRec], message_text)
                 bot.send_message(chat_id, "Отправлено сообщение юзеру " + recipients[
-                    _itRec] + " текст - " + message_text + " от " + user["login"])
+                    _itRec] + " текст - '" + message_text + "' от " + user["login"])
                 file = open("clients/" + str(chat_id) + "/sended.txt", "a")
                 file.write(recipients[_itRec] + "\n")
                 file.close()
@@ -283,7 +289,7 @@ def send_spam(message):
             file.close()
         except BaseException as e:
             bot.send_message(chat_id, "Не удалось отправить юзеру " + recipients[_itRec] + " от " + user[
-                "login"] + " текст " + message_text + " " + str(e))
+                "login"] + " текст '" + message_text + "'. Ошибка: " + str(e))
             _errors += 1
             if _errors != len(valid_users):
                 _itRec -= 1
@@ -295,7 +301,7 @@ def send_spam(message):
 @bot.message_handler(commands=['set_base'])
 def set_base(message):
     chat_id = message.chat.id
-    bot.send_message(chat_id, "Отправьте текстовый файл с логинами.")
+    bot.send_message(chat_id, "Отправьте файл с расширением xlsx")
     bot.register_next_step_handler(message, set_base_handler)
 
 def set_base_handler(message):
@@ -310,8 +316,9 @@ def set_base_handler(message):
         src = "clients/"+str(chat_id)+"/base.xlsx";
         with open(src, 'wb') as new_file:
             new_file.write(downloaded_file)
+            bot.send_message(chat_id, "База для рассылки установлена.")
     except Exception as e:
-        bot.reply_to(message, e)
+        bot.reply_to(message, "Требуется файл с расширением xlsx")
 
 @bot.message_handler(commands=['delete_user'])
 def delete_user(message):
@@ -336,14 +343,17 @@ def delete_user_handler(message):
 @bot.message_handler(commands=['clear_sended'])
 def clear_sended(message):
     chat_id = message.chat.id
-    file = open("clients/" + str(chat_id) + "/sended.txt", "w")
-    file.close()
+    create_client_dir(chat_id)
+    try:
+        file = open("clients/" + str(chat_id) + "/sended.txt", "w")
+        file.close()
+    except:
+        pass
     bot.send_message(chat_id, "Очищено.")
 
 def create_keyboard():
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(KeyboardButton('/set_message'))
-    keyboard.add(KeyboardButton('/set_recipients'))
     keyboard.add(KeyboardButton('/send_spam'))
     keyboard.add(KeyboardButton("/user_append"))
     keyboard.add(KeyboardButton("/get_users"))
